@@ -7,11 +7,7 @@ import tensorflow as tf
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-MODEL_PATH = (
-    Path(__file__).parent.parent
-    / "modelo"
-    / "modelo_optimo_epoca_130.h5"
-)
+MODEL_PATH = Path(__file__).parent / "modelo_optimo_epoca_130.h5"
 
 app_state: dict = {}
 
