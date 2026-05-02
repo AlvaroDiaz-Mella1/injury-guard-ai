@@ -3,3 +3,5 @@ uvicorn[standard]
 python-multipart
 tensorflow
 pandas
+joblib
+scikit-learn
