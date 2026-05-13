@@ -45,6 +45,7 @@ async def analyze(file: UploadFile):
     contents = await file.read()
     df = pd.read_csv(BytesIO(contents))
 
+    df = df.drop(columns=["SEMANA"], errors="ignore")
     df = df.apply(pd.to_numeric, errors="coerce")
     array_crudo = df.values
 
