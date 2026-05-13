@@ -3,55 +3,58 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { UploadArea, type UploadStatus } from "@/components/UploadArea";
-import { ResultsDashboard } from "@/components/ResultsDashboard";
+import { ResultsDashboard, type AnalysisResult } from "@/components/ResultsDashboard";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
+const API_URL = "http://localhost:8002/api/analyze";
+
 function Index() {
-  // ===== Estado central de la aplicación =====
-  // Estos useState están aislados para que puedas conectarlos fácilmente
-  // a tu backend / modelo real. Reemplaza los setTimeout por las llamadas reales.
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [file, setFile] = useState<File | null>(null);
-  const [hasResults, setHasResults] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  // 1) Selección de archivo (drag & drop o picker)
   const handleFileSelected = (selected: File) => {
     setFile(selected);
     setStatus("uploaded");
-    // TODO: aquí podrías validar el contenido del CSV antes del análisis.
   };
 
-  // 2) Lanzar análisis (simulado). Sustituye por la llamada real a tu API.
   const handleAnalyze = async () => {
     if (!file) return;
     setStatus("analyzing");
 
-    // ===== INYECTAR LÓGICA DE BACKEND AQUÍ =====
-    // const formData = new FormData();
-    // formData.append("file", file);
-    // const res = await fetch("/api/predict", { method: "POST", body: formData });
-    // const data = await res.json();
-    // setPredictionResult(data); // <- guarda los resultados en estado y úsalos en ResultsDashboard
-    // ===========================================
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    // Simulación visual del análisis
-    await new Promise((r) => setTimeout(r, 2200));
+      const res = await fetch(API_URL, { method: "POST", body: formData });
 
-    setHasResults(true);
-    setStatus("idle");
-    toast.success("Archivo analizado correctamente", {
-      description: "Los resultados están disponibles abajo.",
-    });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { detail?: string }).detail ?? `Error ${res.status}`);
+      }
+
+      const data: AnalysisResult = await res.json();
+      setResult(data);
+      setStatus("idle");
+      toast.success("Análisis completado", { description: data.estado_principal });
+    } catch (err) {
+      setStatus("uploaded");
+      toast.error("Error al conectar con el servidor", {
+        description:
+          err instanceof Error
+            ? err.message
+            : "Comprueba que el backend está activo en localhost:8002",
+      });
+    }
   };
 
-  // 3) Reset completo (botón "Nuevo Análisis" o quitar archivo)
   const handleReset = () => {
     setFile(null);
     setStatus("idle");
-    setHasResults(false);
+    setResult(null);
   };
 
   return (
@@ -78,12 +81,12 @@ function Index() {
             onReset={handleReset}
           />
 
-          <ResultsDashboard hasResults={hasResults} onReset={handleReset} />
+          <ResultsDashboard result={result} onReset={handleReset} />
         </section>
       </main>
 
       <footer className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
-        AI Injury Predictor · Interfaz preparada para integración con modelo de IA
+        AI Injury Predictor · Análisis predictivo de lesiones en futbolistas
       </footer>
     </div>
   );

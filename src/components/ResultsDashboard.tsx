@@ -1,17 +1,22 @@
-import { ShieldCheck, Activity, TrendingUp, HeartPulse, RotateCcw, FileBarChart2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, HeartPulse, Activity, RotateCcw, FileBarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+export interface AnalysisResult {
+  probabilidad_lesion: string;
+  probabilidad_sano: string;
+  estado_principal: string;
+}
 
 interface ResultsDashboardProps {
-  hasResults: boolean;
+  result: AnalysisResult | null;
   onReset: () => void;
 }
 
-export function ResultsDashboard({ hasResults, onReset }: ResultsDashboardProps) {
-  if (!hasResults) {
-    return <EmptyState />;
-  }
-  return <ResultsView onReset={onReset} />;
+export function ResultsDashboard({ result, onReset }: ResultsDashboardProps) {
+  if (!result) return <EmptyState />;
+  return <ResultsView result={result} onReset={onReset} />;
 }
 
 function EmptyState() {
@@ -27,107 +32,110 @@ function EmptyState() {
   );
 }
 
-function ResultsView({ onReset }: { onReset: () => void }) {
-  // NOTE: Conecta aquí los valores reales devueltos por tu modelo de IA.
-  // Por ahora se muestran valores neutros ("-" / "0%") preparados para inyección.
+function ResultsView({ result, onReset }: { result: AnalysisResult; onReset: () => void }) {
+  const pctLesion = parseInt(result.probabilidad_lesion, 10);
+  const pctSano = parseInt(result.probabilidad_sano, 10);
+  const isHealthy = pctSano >= pctLesion;
+
   return (
     <div className="space-y-5">
+      {/* Cabecera */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold text-foreground">Resultados del análisis</h3>
-          <p className="text-sm text-muted-foreground">
-            Predicción generada por el modelo de IA
-          </p>
+          <p className="text-sm text-muted-foreground">Predicción generada por el modelo de IA</p>
         </div>
-        <Button variant="outline" onClick={onReset}>
+        <Button variant="outline" size="sm" onClick={onReset}>
           <RotateCcw className="h-4 w-4" />
-          Nuevo Análisis
+          Nuevo análisis
         </Button>
       </div>
 
-      {/* Tarjeta principal: Riesgo Global */}
-      <Card className="overflow-hidden border-border/70 shadow-[var(--shadow-elevated)]">
-        <div className="bg-gradient-to-br from-primary to-primary-glow p-6 text-primary-foreground">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80">
-            <ShieldCheck className="h-4 w-4" />
-            Riesgo de Lesión Global
+      {/* Tarjeta principal: estado dominante */}
+      <Card className="overflow-hidden border-0 shadow-[var(--shadow-elevated)]">
+        <div
+          className={cn(
+            "p-6 text-white",
+            isHealthy
+              ? "bg-gradient-to-br from-emerald-500 to-emerald-600"
+              : "bg-gradient-to-br from-red-500 to-red-600",
+          )}
+        >
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider opacity-80">
+            {isHealthy ? (
+              <ShieldCheck className="h-4 w-4" />
+            ) : (
+              <ShieldAlert className="h-4 w-4" />
+            )}
+            {isHealthy ? "Estado del jugador" : "Alerta de riesgo"}
           </div>
+
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
-              {/* TODO: reemplaza "0%" con el valor de riesgo global del modelo */}
-              <p className="text-5xl font-bold leading-none tracking-tight">0%</p>
-              <p className="mt-2 text-sm opacity-80">
-                {/* TODO: nivel cualitativo (Bajo / Moderado / Alto) según umbrales */}
-                Nivel: —
+              <p className="text-6xl font-bold leading-none tracking-tight">
+                {isHealthy ? result.probabilidad_sano : result.probabilidad_lesion}
+              </p>
+              <p className="mt-2 text-sm opacity-90">
+                {isHealthy ? "Probabilidad de estar sano" : "Probabilidad de lesión"}
               </p>
             </div>
-            <div className="rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur-sm">
-              Confianza: —
-            </div>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur-sm">
+              {isHealthy ? "Bajo riesgo" : "Alto riesgo"}
+            </span>
           </div>
         </div>
       </Card>
 
-      {/* Métricas secundarias - estructura preparada para conectar */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <MetricCard
-          icon={<Activity className="h-4 w-4" />}
-          label="Estado de forma"
-          value="-"
-          hint="Índice agregado"
-        />
-        <MetricCard
-          icon={<HeartPulse className="h-4 w-4" />}
-          label="Carga acumulada"
-          value="-"
-          hint="Últimos 7 días"
-        />
-        <MetricCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Tendencia"
-          value="-"
-          hint="Variación semanal"
-        />
+      {/* Métricas secundarias */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="border-border/70 shadow-[var(--shadow-card)]">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <HeartPulse className="h-4 w-4 text-emerald-500" />
+              Probabilidad sano
+            </div>
+            <p className="mt-3 text-4xl font-bold text-emerald-600">{result.probabilidad_sano}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Sin lesión estimada</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 shadow-[var(--shadow-card)]">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <Activity className="h-4 w-4 text-red-500" />
+              Probabilidad lesión
+            </div>
+            <p className="mt-3 text-4xl font-bold text-red-500">{result.probabilidad_lesion}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Riesgo estimado</p>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Diagnóstico textual */}
       <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-foreground">
-            Recomendaciones
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {/* TODO: Inyecta aquí las recomendaciones generadas por el modelo */}
-            Las recomendaciones aparecerán aquí una vez conectado el modelo.
-          </p>
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                "mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full",
+                isHealthy
+                  ? "bg-emerald-100 text-emerald-600"
+                  : "bg-red-100 text-red-600",
+              )}
+            >
+              {isHealthy ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <ShieldAlert className="h-4 w-4" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Diagnóstico principal</p>
+              <p className="mt-1 text-sm text-muted-foreground">{result.estado_principal}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)]">
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          <span className="text-primary">{icon}</span>
-          {label}
-        </div>
-        <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-      </CardContent>
-    </Card>
   );
 }
